@@ -2,8 +2,18 @@ local config = require 'config.client'
 local sharedConfig = require 'config.shared'
 local WEAPONS = exports.qbx_core:GetWeapons()
 local allowRespawn = true
+local isEscorted = false
+
+--- Mirrors the same pattern used in setdownedstate.lua for laststand.
+--- When isEscorted is true (e.g. on a stretcher), skip the dead animation
+--- so external scripts can play their own animation without conflict.
+AddEventHandler('hospital:client:isEscorted', function(bool)
+    isEscorted = bool
+end)
 
 local function playDeadAnimation()
+    if isEscorted then return end
+
     local deadAnimDict = 'dead'
     local playerData = QBX.PlayerData
     local metadata = playerData and playerData.metadata
@@ -35,7 +45,9 @@ function OnDeath(attacker, weapon)
     CreateThread(function()
         while DeathState == sharedConfig.deathState.DEAD do
             DisableControls()
-            SetCurrentPedWeapon(cache.ped, `WEAPON_UNARMED`, true)
+            if not isEscorted then
+                SetCurrentPedWeapon(cache.ped, `WEAPON_UNARMED`, true)
+            end
             Wait(0)
         end
     end)
